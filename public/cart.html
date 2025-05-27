@@ -134,5 +134,135 @@
         </div>
       </div>
     </div>
+    <script>
+      document.addEventListener('DOMContentLoaded', function() {
+        const cartItemsListContainer = document.querySelector('.layout-content-container > div.flex.flex-col.max-w-\\[960px\\].flex-1');
+        const orderSummaryContainer = document.querySelector('h3.text-\\[#1b0e0e\\].text-lg.font-bold + div.p-4');
+        
+        let subtotalEl, totalEl;
+
+        if (orderSummaryContainer) {
+            const summaryRows = orderSummaryContainer.querySelectorAll('div.flex.justify-between');
+            summaryRows.forEach(row => {
+                const keyEl = row.querySelector('p.text-\\[#994d51\\]');
+                const valueEl = row.querySelector('p.text-\\[#1b0e0e\\]');
+                if (keyEl && valueEl) {
+                    if (keyEl.textContent.trim() === 'Subtotal') subtotalEl = valueEl;
+                    else if (keyEl.textContent.trim() === 'Total') totalEl = valueEl;
+                }
+            });
+        }
+
+        function displayMessage(message) {
+            // Clear existing items before showing a message
+            const existingItems = cartItemsListContainer.querySelectorAll('.cart-item-dynamic');
+            existingItems.forEach(item => item.remove());
+            
+            // Remove existing message if any
+            const existingMessage = cartItemsListContainer.querySelector('.cart-message');
+            if (existingMessage) existingMessage.remove();
+
+            const messageEl = document.createElement('p');
+            messageEl.className = 'text-center text-[#1b0e0e] p-4 cart-message';
+            messageEl.textContent = message;
+            // Insert after the "Your Cart" title
+            const titleEl = cartItemsListContainer.querySelector('div.flex.flex-wrap.justify-between');
+            if (titleEl && titleEl.nextSibling) {
+                 cartItemsListContainer.insertBefore(messageEl, titleEl.nextSibling);
+            } else if (titleEl) {
+                 cartItemsListContainer.appendChild(messageEl);
+            } else {
+                 cartItemsListContainer.prepend(messageEl); // Fallback
+            }
+        }
+
+        fetch('/cart')
+          .then(response => {
+            if (response.status === 401) {
+              displayMessage('Please log in to view your cart.');
+              if (subtotalEl) subtotalEl.textContent = '$0.00';
+              if (totalEl) totalEl.textContent = '$0.00';
+              throw new Error('Unauthorized'); // Stop further processing
+            }
+            if (!response.ok) {
+              throw new Error(`HTTP error! status: ${response.status}`);
+            }
+            return response.json();
+          })
+          .then(cartItems => {
+            // Clear existing static/dynamic items
+            const existingItems = cartItemsListContainer.querySelectorAll('.cart-item-dynamic, .flex.gap-4.bg-\\[\\#fcf8f8\\].px-4.py-3.justify-between');
+            existingItems.forEach(item => item.remove());
+            
+            const existingMessage = cartItemsListContainer.querySelector('.cart-message');
+            if (existingMessage) existingMessage.remove();
+
+            if (!cartItems || cartItems.length === 0) {
+              displayMessage('Your cart is empty.');
+              if (subtotalEl) subtotalEl.textContent = '$0.00';
+              if (totalEl) totalEl.textContent = '$0.00';
+              return;
+            }
+
+            let currentSubtotal = 0;
+
+            cartItems.forEach(item => {
+              const productVariant = item.product_variant;
+              // Assuming product_variant has product.name, product.image_url, and its own price
+              // This structure might need adjustment based on the actual API response.
+              // For now, let's assume 'product_variant.name' and 'product_variant.image_url' and 'product_variant.price' exist.
+              // If product details are nested under 'product_variant.product', adjust accordingly.
+              const productName = productVariant.name || (productVariant.product ? productVariant.product.name : 'N/A');
+              const productImage = productVariant.image_url || (productVariant.product ? productVariant.product.image_url : 'https://via.placeholder.com/70x70.png?text=No+Image');
+              const productPrice = typeof productVariant.price === 'number' ? productVariant.price : (productVariant.product && typeof productVariant.product.price === 'number' ? productVariant.product.price : 0);
+              const productSize = productVariant.size || 'N/A';
+
+              currentSubtotal += item.quantity * productPrice;
+
+              const itemEl = document.createElement('div');
+              itemEl.className = 'flex gap-4 bg-[#fcf8f8] px-4 py-3 justify-between cart-item-dynamic'; // Added cart-item-dynamic class
+              itemEl.id = `cart-item-${item.id}`;
+
+              itemEl.innerHTML = `
+                <div class="flex items-start gap-4">
+                  <div class="bg-center bg-no-repeat aspect-square bg-cover rounded-lg size-[70px]" style="background-image: url('${productImage}');"></div>
+                  <div class="flex flex-1 flex-col justify-center">
+                    <p class="text-[#1b0e0e] text-base font-medium leading-normal">${productName}</p>
+                    <p class="text-[#994d51] text-sm font-normal leading-normal">$${productPrice.toFixed(2)}</p>
+                    <p class="text-[#994d51] text-sm font-normal leading-normal">Size ${productSize}</p>
+                  </div>
+                </div>
+                <div class="shrink-0">
+                  <div class="flex items-center gap-2 text-[#1b0e0e]">
+                    <button class="text-base font-medium leading-normal flex h-7 w-7 items-center justify-center rounded-full bg-[#f3e7e8] cursor-pointer">-</button>
+                    <input class="text-base font-medium leading-normal w-4 p-0 text-center bg-transparent focus:outline-0 focus:ring-0 focus:border-none border-none [appearance:textfield] [&amp;::-webkit-inner-spin-button]:appearance-none [&amp;::-webkit-outer-spin-button]:appearance-none" type="number" value="${item.quantity}" readonly />
+                    <button class="text-base font-medium leading-normal flex h-7 w-7 items-center justify-center rounded-full bg-[#f3e7e8] cursor-pointer">+</button>
+                  </div>
+                </div>
+              `;
+              // Insert after the "Your Cart" title
+              const titleEl = cartItemsListContainer.querySelector('div.flex.flex-wrap.justify-between');
+              if (titleEl && titleEl.nextSibling) {
+                   cartItemsListContainer.insertBefore(itemEl, titleEl.nextSibling);
+              } else if (titleEl) {
+                   cartItemsListContainer.appendChild(itemEl);
+              } else {
+                   cartItemsListContainer.prepend(itemEl); // Fallback
+              }
+            });
+
+            if (subtotalEl) subtotalEl.textContent = `$${currentSubtotal.toFixed(2)}`;
+            if (totalEl) totalEl.textContent = `$${currentSubtotal.toFixed(2)}`; // Assuming shipping is free for now
+          })
+          .catch(error => {
+            if (error.message !== 'Unauthorized') { // Already handled unauthorized
+              console.error('Error fetching cart:', error);
+              displayMessage('Could not load cart. Please try again later.');
+            }
+            if (subtotalEl) subtotalEl.textContent = '$0.00';
+            if (totalEl) totalEl.textContent = '$0.00';
+          });
+      });
+    </script>
   </body>
 </html>
