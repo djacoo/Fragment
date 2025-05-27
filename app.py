@@ -1,4 +1,4 @@
-from flask import Flask, jsonify, request
+from flask import Flask, jsonify, request, send_from_directory
 from flask_sqlalchemy import SQLAlchemy
 from flask_login import LoginManager, UserMixin, login_user, logout_user, login_required, current_user
 from werkzeug.security import generate_password_hash, check_password_hash
@@ -529,6 +529,33 @@ def subscribe_newsletter():
         db.session.rollback()
         # Log the exception e
         return jsonify({'message': 'An error occurred while subscribing.'}), 500
+
+# Static HTML Serving Routes
+@app.route('/')
+def serve_landing_page():
+    return send_from_directory('public', 'landing_page.html')
+
+@app.route('/shop')
+def serve_shop_all_page():
+    return send_from_directory('public', 'shop_all.html')
+
+@app.route('/item/<int:product_id>')
+def serve_item_page(product_id):
+    # product_id is captured but not used by send_from_directory for now,
+    # as item.html is static. JS will handle dynamic content.
+    return send_from_directory('public', 'item.html')
+
+@app.route('/my-cart')
+def serve_cart_page():
+    return send_from_directory('public', 'cart.html')
+
+@app.route('/register-page')
+def serve_create_account_page():
+    return send_from_directory('public', 'create_account.html')
+
+@app.route('/account-page')
+def serve_my_account_page():
+    return send_from_directory('public', 'my_account.html')
 
 if __name__ == '__main__':
     with app.app_context():

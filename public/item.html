@@ -109,11 +109,13 @@
               A timeless staple, our Classic Crew Neck Tee is crafted from premium, breathable cotton for all-day comfort. Its relaxed fit and durable construction make it perfect
               for everyday wear. Available in a range of versatile colors, this tee is a must-have addition to any wardrobe.
             </p>
+            <p class="text-[#994d51] text-lg font-bold leading-normal px-4 py-2" id="product-price"></p>
             <div class="flex w-full grow bg-[#fcf8f8] @container p-4">
               <div class="w-full gap-1 overflow-hidden bg-[#fcf8f8] @[480px]:gap-2 aspect-[3/2] rounded-lg flex">
                 <div
                   class="w-full bg-center bg-no-repeat bg-cover aspect-auto rounded-none flex-1"
-                  style='background-image: url("https://lh3.googleusercontent.com/aida-public/AB6AXuDVHbCC954EItpaIXIiOEBmAWkHH0758UWnsoiaOePYUdCued5O1osudIVOgwNnBv3huz2YNOYua-tS_O_ci8DEzuS0rOew5DNK1eJp5sPjaCee6aEI8zpa3Y80SlxoY4ehOTFyujAfM7XoiCs-qVRi3vssXSihQm9lAeRuzu8eBlHub-GArqEXK0_guxHCy-HYAzNH22RV7jLAjsj6QJ9__M7ax8JsFHmeXe-kG2Z-LI4fWD6vowZf_685AqCYl2VsCu9ClXc3O9Td");'
+                  id="product-image"
+                  style='background-image: url("https://via.placeholder.com/600x400.png?text=Loading...");'
                 ></div>
               </div>
             </div>
@@ -195,5 +197,119 @@
         </div>
       </div>
     </div>
+    <script>
+      document.addEventListener('DOMContentLoaded', function() {
+        const productNameEl = document.querySelector('h1.text-\\[#1b0e0e\\].text-\\[22px\\].font-bold');
+        const productDescriptionEl = document.querySelector('p.text-\\[#1b0e0e\\].text-base.font-normal.leading-normal.pb-3.pt-1.px-4');
+        const productPriceEl = document.getElementById('product-price');
+        const productImageEl = document.getElementById('product-image');
+        
+        const sizeContainer = document.querySelector('h3.text-\\[#1b0e0e\\].text-lg.font-bold.leading-tight.tracking-\\[-0\\.015em\\].px-4.pb-2.pt-4:nth-of-type(1) + div.flex.flex-wrap.gap-3.p-4');
+        const colorContainer = document.querySelector('h3.text-\\[#1b0e0e\\].text-lg.font-bold.leading-tight.tracking-\\[-0\\.015em\\].px-4.pb-2.pt-4:nth-of-type(2) + div.flex.flex-wrap.gap-5.p-4');
+
+        const detailsContainer = document.querySelector('h3.text-\\[#1b0e0e\\].text-lg.font-bold.leading-tight.tracking-\\[-0\\.015em\\].px-4.pb-2.pt-4:nth-of-type(3) + div.p-4');
+        let materialEl, fitEl, careEl;
+
+        if (detailsContainer) {
+            const detailRows = detailsContainer.querySelectorAll('.col-span-2.grid.grid-cols-subgrid');
+            detailRows.forEach(row => {
+                const keyEl = row.querySelector('p.text-\\[#994d51\\]');
+                const valueEl = row.querySelector('p.text-\\[#1b0e0e\\]');
+                if (keyEl && valueEl) {
+                    if (keyEl.textContent.trim() === 'Material') materialEl = valueEl;
+                    else if (keyEl.textContent.trim() === 'Fit') fitEl = valueEl;
+                    else if (keyEl.textContent.trim() === 'Care') careEl = valueEl;
+                }
+            });
+        }
+
+        const pathParts = window.location.pathname.split('/');
+        const productId = pathParts.pop() || pathParts.pop(); // Handles trailing slash
+
+        if (!productId || isNaN(parseInt(productId))) {
+          console.error('Invalid Product ID in URL');
+          if (productNameEl) productNameEl.textContent = 'Product not found';
+          if (productDescriptionEl) productDescriptionEl.textContent = 'Please check the URL or try again.';
+          return;
+        }
+
+        fetch(`/products/${productId}`)
+          .then(response => {
+            if (!response.ok) {
+              if (response.status === 404) {
+                throw new Error('Product not found');
+              }
+              throw new Error(`HTTP error! status: ${response.status}`);
+            }
+            return response.json();
+          })
+          .then(product => {
+            if (productNameEl) productNameEl.textContent = product.name;
+            if (productDescriptionEl) productDescriptionEl.textContent = product.description;
+            if (productPriceEl) productPriceEl.textContent = `$${typeof product.price === 'number' ? product.price.toFixed(2) : 'N/A'}`;
+            if (productImageEl) productImageEl.style.backgroundImage = `url('${product.image_url || "https://via.placeholder.com/600x400.png?text=No+Image"}')`;
+            
+            if (materialEl && product.material) materialEl.textContent = product.material;
+            if (fitEl && product.fit) fitEl.textContent = product.fit;
+            if (careEl && product.care_instructions) careEl.textContent = product.care_instructions;
+
+            // Populate Sizes
+            if (sizeContainer && product.variants) {
+              sizeContainer.innerHTML = ''; // Clear static options
+              const uniqueSizes = [...new Set(product.variants.map(v => v.size))].filter(s => s); // Filter out null/empty sizes
+              uniqueSizes.forEach((size, index) => {
+                const label = document.createElement('label');
+                label.className = 'text-sm font-medium leading-normal flex items-center justify-center rounded-lg border border-[#e7d0d1] px-4 h-11 text-[#1b0e0e] has-[:checked]:border-[3px] has-[:checked]:px-3.5 has-[:checked]:border-[#e92932] relative cursor-pointer';
+                label.textContent = size;
+                const input = document.createElement('input');
+                input.type = 'radio';
+                input.className = 'invisible absolute';
+                input.name = 'product_size';
+                input.value = size;
+                if (index === 0) input.checked = true; // Select first size by default
+                label.appendChild(input);
+                sizeContainer.appendChild(label);
+              });
+            }
+
+            // Populate Colors
+            if (colorContainer && product.variants) {
+              colorContainer.innerHTML = ''; // Clear static options
+              const uniqueColors = [...new Set(product.variants.map(v => v.color))].filter(c => c); // Filter out null/empty colors
+              uniqueColors.forEach((color, index) => {
+                const label = document.createElement('label');
+                label.className = 'size-10 rounded-full border border-[#e7d0d1] ring-[color-mix(in_srgb,#1b0e0e_50%,_transparent)] has-[:checked]:border-[3px] has-[:checked]:border-[#fcf8f8] has-[:checked]:ring relative cursor-pointer';
+                label.style.backgroundColor = color; // Assuming color is a valid CSS color string
+                
+                const input = document.createElement('input');
+                input.type = 'radio';
+                input.className = 'invisible absolute';
+                input.name = 'product_color';
+                input.value = color;
+                if (index === 0) input.checked = true; // Select first color by default
+                
+                // Add a span for screen readers or if background color isn't enough
+                const srSpan = document.createElement('span');
+                srSpan.className = 'sr-only'; // Tailwind class for screen-reader only
+                srSpan.textContent = color;
+                label.appendChild(srSpan);
+
+                label.appendChild(input);
+                colorContainer.appendChild(label);
+              });
+            }
+          })
+          .catch(error => {
+            console.error('Error fetching product details:', error);
+            if (productNameEl) productNameEl.textContent = error.message === 'Product not found' ? 'Product not found' : 'Error loading product';
+            if (productDescriptionEl) productDescriptionEl.textContent = 'Please check the URL or try again later.';
+            if (productImageEl) productImageEl.style.backgroundImage = `url('https://via.placeholder.com/600x400.png?text=Error')`;
+            if (productPriceEl) productPriceEl.textContent = '';
+            if (sizeContainer) sizeContainer.innerHTML = '<p>N/A</p>';
+            if (colorContainer) colorContainer.innerHTML = '<p>N/A</p>';
+
+          });
+      });
+    </script>
   </body>
 </html>
