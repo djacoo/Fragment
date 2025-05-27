@@ -147,5 +147,70 @@
         </div>
       </div>
     </div>
+    <script>
+      document.addEventListener('DOMContentLoaded', function() {
+        const productGrid = document.querySelector('.grid.grid-cols-\\[repeat\\(auto-fit\\,minmax\\(158px\\,1fr\\)\\)\\]');
+        if (!productGrid) {
+          console.error('Product grid not found');
+          return;
+        }
+
+        fetch('/products')
+          .then(response => {
+            if (!response.ok) {
+              throw new Error(`HTTP error! status: ${response.status}`);
+            }
+            return response.json();
+          })
+          .then(products => {
+            productGrid.innerHTML = ''; // Clear existing hardcoded items
+
+            if (!Array.isArray(products)) {
+              console.error('Fetched data is not an array:', products);
+              // Display a message to the user if appropriate
+              productGrid.innerHTML = '<p>Could not load products at this time. Please try again later.</p>';
+              return;
+            }
+            
+            if (products.length === 0) {
+              productGrid.innerHTML = '<p>No products found.</p>';
+              return;
+            }
+
+            products.forEach(product => {
+              const productCard = document.createElement('div');
+              productCard.className = 'flex flex-col gap-3 pb-3';
+
+              const imageDiv = document.createElement('div');
+              imageDiv.className = 'w-full bg-center bg-no-repeat aspect-[3/4] bg-cover rounded-lg';
+              // Use product.image_url or a placeholder
+              imageDiv.style.backgroundImage = `url('${product.image_url || "https://via.placeholder.com/300x400.png?text=No+Image"}')`;
+
+              const infoDiv = document.createElement('div');
+              
+              const nameP = document.createElement('p');
+              nameP.className = 'text-[#1b0e0e] text-base font-medium leading-normal';
+              nameP.textContent = product.name;
+              
+              const priceP = document.createElement('p');
+              priceP.className = 'text-[#994d51] text-sm font-normal leading-normal';
+              // Ensure price is a number and format it
+              priceP.textContent = `$${typeof product.price === 'number' ? product.price.toFixed(2) : 'N/A'}`;
+
+              infoDiv.appendChild(nameP);
+              infoDiv.appendChild(priceP);
+              
+              productCard.appendChild(imageDiv);
+              productCard.appendChild(infoDiv);
+              
+              productGrid.appendChild(productCard);
+            });
+          })
+          .catch(error => {
+            console.error('Error fetching products:', error);
+            productGrid.innerHTML = '<p>Error loading products. Please check the console for details.</p>';
+          });
+      });
+    </script>
   </body>
 </html>
